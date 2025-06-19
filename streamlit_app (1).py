@@ -1,20 +1,18 @@
-
 import streamlit as st
 import pandas as pd
-import numpy as np
-from joblib import load
 import os
+from joblib import load
 
-# 使用更安全的方式加载模型文件
+# 尝试加载模型和scaler，失败则置为None
 try:
-    model_path = os.path.join(os.path.dirname(__file__), 'rf_model.joblib')
-    scaler_path = os.path.join(os.path.dirname(__file__), 'rf_scaler.joblib')
+    model_path = os.path.join(os.getcwd(), 'rf_model.joblib')
+    scaler_path = os.path.join(os.getcwd(), 'rf_scaler.joblib')
     rf_model = load(model_path)
     scaler = load(scaler_path)
 except Exception as e:
-    st.error(f"模型加载失败: {e}")
     rf_model = None
     scaler = None
+    st.warning(f"模型加载失败，预测功能暂不可用：{e}")
 
 FEATURES = [
     '抗RO52滴度', 'LDH', '甘油三酯', '纤维蛋白原',
@@ -36,14 +34,13 @@ with st.form("预测表单"):
     submitted = st.form_submit_button("提交预测")
 
     if submitted:
-        try:
-            if rf_model is None or scaler is None:
-                st.error("模型未加载成功")
-            elif albumin == 0:
-                st.error("白蛋白值不能为0")
-            else:
+        if rf_model is None or scaler is None:
+            st.error("模型未加载成功，无法进行预测")
+        elif albumin == 0:
+            st.error("白蛋白值不能为0")
+        else:
+            try:
                 hemoglobin_albumin_ratio = hemoglobin / (albumin + 1e-6)
-
                 input_data = {
                     '抗RO52滴度': ro52,
                     'LDH': ldh,
@@ -53,12 +50,10 @@ with st.form("预测表单"):
                     '白细胞计数': wbc,
                     '血红蛋白_÷_白蛋白': hemoglobin_albumin_ratio
                 }
-
                 df = pd.DataFrame([input_data])[FEATURES]
                 X_scaled = scaler.transform(df)
                 prob = rf_model.predict_proba(X_scaled)[0][1]
-
                 st.success(f"预测ILD分级为：{'1级' if prob >= 0.5 else '0级'}")
                 st.write(f"预测概率为：{prob:.4f}")
-        except Exception as e:
-            st.error(f"出错: {e}")
+            except Exception as e:
+                st.error(f"预测时出错: {e}")
