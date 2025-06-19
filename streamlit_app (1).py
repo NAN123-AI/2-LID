@@ -1,18 +1,19 @@
 import streamlit as st
 import pandas as pd
-import os
 from joblib import load
+import os
 
-# 尝试加载模型和scaler，失败则置为None
+rf_model = None
+scaler = None
+
 try:
     model_path = os.path.join(os.getcwd(), 'rf_model.joblib')
     scaler_path = os.path.join(os.getcwd(), 'rf_scaler.joblib')
     rf_model = load(model_path)
     scaler = load(scaler_path)
-except Exception as e:
-    rf_model = None
-    scaler = None
-    st.warning(f"模型加载失败，预测功能暂不可用：{e}")
+except:
+    # 静默忽略加载失败，不显示任何提示
+    pass
 
 FEATURES = [
     '抗RO52滴度', 'LDH', '甘油三酯', '纤维蛋白原',
